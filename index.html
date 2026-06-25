@@ -608,8 +608,10 @@ const AVATARS = ["👨‍🌾", "👩‍🌾", "🧑‍🌾", "🐱", "🐶", "�
 const GAME_STATE_KEY = "qqfarm_game_v5";
 const ADMIN_AUTH_KEY = "qqfarm_admin_auth_v1";
 const ADMIN_FIXED_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
-const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbyGIGcR3pJq89J3e8xJ7Vx734szuXbyVqvg_H7_93Dr1yz6RQwSRehhphv6l62aZjXi-w/exec"
+const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbzX7C3cXiTOONk7nXe83-_peYe1mVakfXZ0vBjxUmuxLXr1zCOR0vw20Ub5vFnKmPCH3Q/exec"
 const DEFAULT_CLOUD_WRITE_TOKEN = "qqfarm_wt_7f4c9d2a8b1e6c3d5f0a";
+const AUTO_CLOUD_SYNC_MS = 2200;
+const AUTO_CLOUD_RETRY_MS = 6000;
 
 let S = {
   lang: "en",
@@ -641,10 +643,41 @@ let btChar = null;
 let noticeTimer = null;
 let adminUnlocked = false;
 let userUnlockedId = null;
+let autoCloudTimer = null;
+let autoCloudDirty = false;
+let autoCloudInFlight = false;
 
 function tr(k) { return I18N[S.lang][k] || I18N.zh[k] || k; }
 function cropName(k) { return CROPS[k].name[S.lang] || CROPS[k].name.zh; }
-function save() { localStorage.setItem(GAME_STATE_KEY, JSON.stringify(S)); }
+function scheduleAutoCloudSave() {
+  if (!(S.cloud.url || "").trim()) return;
+  autoCloudDirty = true;
+  if (autoCloudTimer) return;
+  autoCloudTimer = setTimeout(flushAutoCloudSave, AUTO_CLOUD_SYNC_MS);
+}
+
+async function flushAutoCloudSave() {
+  autoCloudTimer = null;
+  if (!autoCloudDirty || autoCloudInFlight) return;
+  autoCloudDirty = false;
+  autoCloudInFlight = true;
+  try {
+    await cloudRequest("save");
+  } catch (e) {
+    console.error(e);
+    autoCloudDirty = true;
+  } finally {
+    autoCloudInFlight = false;
+    if (autoCloudDirty && !autoCloudTimer) {
+      autoCloudTimer = setTimeout(flushAutoCloudSave, AUTO_CLOUD_RETRY_MS);
+    }
+  }
+}
+
+function save(markCloudDirty = true) {
+  localStorage.setItem(GAME_STATE_KEY, JSON.stringify(S));
+  if (markCloudDirty) scheduleAutoCloudSave();
+}
 
 function saveAdminAuthLocal() {
   const payload = {
@@ -904,7 +937,7 @@ async function loadFromCloud() {
         cloud
       };
       loadAdminAuthLocal();
-      save();
+      save(false);
       render();
       notice(tr("cloudLoadOk"));
       addLog("☁️ " + tr("cloudLoadOk"));
@@ -1864,7 +1897,7 @@ function loop() {
   renderHeader();
   renderGrid();
   renderFriends();
-  save();
+  save(false);
 }
 
 async function boot() {
