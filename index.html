@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -153,6 +153,7 @@ body {
 .notice.err { background: linear-gradient(140deg, #ad2f32, #ca4d4f); }
 .notice.info { background: linear-gradient(140deg, #216ab6, #2f87d5); }
 .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 110; background: rgba(0,0,0,.58); }
+.overlay#addModal { z-index: 120; }
 .overlay.show { display: flex; }
 .modal { width: min(92vw, 360px); border-radius: 14px; border: 2px solid rgba(255,255,255,.35); background: linear-gradient(150deg, #244d2f, #376c41); padding: 14px; }
 .modal h2 { margin-bottom: 8px; font-size: 18px; }
@@ -216,6 +217,7 @@ body {
       <button id="tabVisit" class="btn"></button>
       <button id="btBtn" class="btn bluetooth"></button>
       <button id="adminBtn" class="btn admin"></button>
+      <button id="logoutBtn" class="btn"></button>
       <div id="langs" class="langs"></div>
     </div>
   </div>
@@ -277,10 +279,24 @@ body {
   <div class="modal">
     <h2 id="addTitle"></h2>
     <input id="newName" maxlength="10">
+    <input id="newLocation" maxlength="24">
+    <input id="newPassword" type="password" autocomplete="off">
     <select id="newAvatar"></select>
     <div class="modal-actions">
       <button id="addCancel" class="btn"></button>
       <button id="addConfirm" class="btn active"></button>
+    </div>
+  </div>
+</div>
+
+<div id="loginModal" class="overlay">
+  <div class="modal">
+    <h2 id="loginTitle"></h2>
+    <select id="loginPlayer"></select>
+    <input id="loginPassword" type="password" autocomplete="off">
+    <div class="modal-actions">
+      <button id="loginCreate" class="btn"></button>
+      <button id="loginSubmit" class="btn active"></button>
     </div>
   </div>
 </div>
@@ -372,7 +388,7 @@ const I18N = {
   zh: {
     title: "🌱 QQ农场", tabMine: "我的农场", tabVisit: "拜访好友", bt: "蓝牙控制",
     shop: "种子商店", friends: "好友农场", add: "添加玩家", log: "农场日志",
-    switchP: "切换玩家", close: "关闭", newP: "创建玩家", cancel: "取消", create: "创建", namePh: "输入昵称（最多10字）",
+    switchP: "切换玩家", close: "关闭", logout: "退出登录", newP: "创建玩家", cancel: "取消", create: "创建", namePh: "输入昵称（最多10字）", locPh: "输入地区（如: 上海）", passPh: "设置登录密码（至少4位）",
     farmMine: "的农场", farmVisit: "正在拜访", tools: ["🌱 种植", "💧 浇水", "🌾 收获", "🧪 施肥"],
     weather: "天气", wsunny: "晴天", wrain: "下雨（加速）", wheat: "炎热（减速）", wcold: "寒潮（减速）",
     empty: "点击空地种植", ready: "可收获", withered: "枯萎", noGold: "金币不足",
@@ -381,27 +397,27 @@ const I18N = {
     controlHint: "键盘: WASD/方向键移动, 空格执行, 1-4切换工具。蓝牙命令文本: UP DOWN LEFT RIGHT ACT TOOL1 TOOL2 TOOL3 TOOL4。",
     btUnsup: "浏览器不支持 Web Bluetooth", btConn: "蓝牙连接中...", btOk: "蓝牙已连接", btFail: "蓝牙连接失败", btDisc: "蓝牙已断开",
     cloudSave: "云端保存", cloudLoad: "云端读取", cloudTest: "连接测试", cloudCfg: "云端设置", cloudTitle: "Google Sheets 云端设置",
-    cloudCfgSaved: "云端配置已保存", cloudNeedUrl: "请先配置云端 URL", cloudSaveOk: "云端保存成功", cloudLoadOk: "云端读取成功", cloudNoData: "云端暂无存档", cloudPingOk: "云连接正常", cloudFail: "云端请求失败", cloudBadUrl: "云端 URL 无效", cloudUnauthorized: "云端令牌无效或无权限", cloudBadResp: "云端返回格式异常",
+    cloudCfgSaved: "云端配置已保存", cloudNeedUrl: "请先配置云端 URL", cloudSaveOk: "云端保存成功", cloudLoadOk: "云端读取成功", cloudNoData: "云端暂无存档", cloudPingOk: "云连接正常", cloudFail: "云端请求失败", cloudBadUrl: "云端 URL 无效", cloudUnauthorized: "云端令牌无效或无权限", cloudBadResp: "云端返回格式异常", cloudFileMode: "请通过 http://localhost 打开游戏，不要使用 file://",
     admin: "管理", adminTitle: "管理员面板", adminPlayer: "玩家", adminGold: "金币", adminXp: "经验",
     adminApply: "应用数值", adminBoost: "加500金币+经验", adminFillReady: "全部成熟", adminClear: "清空地块",
     adminWeatherSunny: "天气: 晴", adminWeatherRain: "天气: 雨", adminWeatherHeat: "天气: 热", adminWeatherCold: "天气: 寒",
-    adminCloudTitle: "云端配置", adminCloudUrl: "云端URL", adminCloudGameId: "游戏ID", adminCloudToken: "访问令牌(可选)", adminCloudSave: "保存云端配置",
+    adminCloudTitle: "云端配置", adminCloudUrl: "云端URL", adminCloudGameId: "游戏ID", adminCloudToken: "写入令牌（保存时必需）", adminCloudSave: "保存云端配置",
     adminDone: "管理操作已执行",
     adminPending: "待审批注册", adminApprove: "批准", adminReject: "拒绝", adminNoPending: "暂无待审批申请",
     signupSubmitted: "注册申请已提交，等待管理员审批", signupNameExists: "昵称已存在或待审批中", adminOnly: "仅管理员可操作",
     adminAuthTitle: "管理员验证", adminAuthUnlock: "解锁", adminAuthSetup: "设置口令", adminTokenPh: "输入管理员口令",
     adminTokenConfirmPh: "再次输入口令", adminSetupHint: "首次使用：设置管理员口令（仅保存SHA-256哈希）",
-    adminUnlockHint: "输入管理员口令以解锁", adminTokenTooShort: "口令至少 4 位", adminTokenMismatch: "两次口令不一致",
+    adminUnlockHint: "输入管理员口令以解锁", adminFixedHint: "管理员口令固定为: admin（仅存储SHA-256哈希）", adminTokenTooShort: "口令至少 4 位", adminTokenMismatch: "两次口令不一致",
     adminAuthBad: "管理员口令错误", adminAuthOk: "管理员已解锁", adminAuthSetOk: "管理员口令已设置",
     userAuthTitle: "玩家登录", userAuthUnlock: "登录", userAuthSetup: "设置玩家口令", userTokenPh: "输入玩家口令",
     userTokenConfirmPh: "再次输入玩家口令", userSetupHint: "首次登录此玩家：请设置口令（仅保存SHA-256哈希）",
     userUnlockHint: "输入玩家口令登录", userAuthBad: "玩家口令错误", userAuthOk: "登录成功", userAuthSetOk: "玩家口令已设置",
-    userNeedLogin: "请先完成玩家登录"
+    userNeedLogin: "请先完成玩家登录", loginPageTitle: "登录页面"
   },
   en: {
     title: "🌱 QQ Farm", tabMine: "My Farm", tabVisit: "Visit Friend", bt: "Bluetooth",
     shop: "Seed Shop", friends: "Friends", add: "Add Player", log: "Farm Log",
-    switchP: "Switch Player", close: "Close", newP: "Create Player", cancel: "Cancel", create: "Create", namePh: "Nickname (max 10)",
+    switchP: "Switch Player", close: "Close", logout: "Logout", newP: "Create Player", cancel: "Cancel", create: "Create", namePh: "Nickname (max 10)", locPh: "Location (e.g. Tokyo)", passPh: "Set login password (min 4)",
     farmMine: "'s Farm", farmVisit: "Visiting", tools: ["🌱 Plant", "💧 Water", "🌾 Harvest", "🧪 Fertilize"],
     weather: "Weather", wsunny: "Sunny", wrain: "Rain (+speed)", wheat: "Hot (-speed)", wcold: "Cold wave (-speed)",
     empty: "Tap empty plot", ready: "Ready", withered: "Withered", noGold: "Not enough gold",
@@ -410,27 +426,27 @@ const I18N = {
     controlHint: "Keyboard: WASD/Arrows move, Space act, 1-4 tools. Bluetooth command text: UP DOWN LEFT RIGHT ACT TOOL1 TOOL2 TOOL3 TOOL4.",
     btUnsup: "Web Bluetooth not supported", btConn: "Connecting Bluetooth...", btOk: "Bluetooth connected", btFail: "Bluetooth failed", btDisc: "Bluetooth disconnected",
     cloudSave: "Cloud Save", cloudLoad: "Cloud Load", cloudTest: "Test Connection", cloudCfg: "Cloud Setup", cloudTitle: "Google Sheets Cloud Settings",
-    cloudCfgSaved: "Cloud config saved", cloudNeedUrl: "Set cloud URL first", cloudSaveOk: "Cloud save success", cloudLoadOk: "Cloud load success", cloudNoData: "No cloud save found yet", cloudPingOk: "Cloud connection OK", cloudFail: "Cloud request failed", cloudBadUrl: "Invalid cloud URL", cloudUnauthorized: "Cloud token invalid or unauthorized", cloudBadResp: "Unexpected cloud response format",
+    cloudCfgSaved: "Cloud config saved", cloudNeedUrl: "Set cloud URL first", cloudSaveOk: "Cloud save success", cloudLoadOk: "Cloud load success", cloudNoData: "No cloud save found yet", cloudPingOk: "Cloud connection OK", cloudFail: "Cloud request failed", cloudBadUrl: "Invalid cloud URL", cloudUnauthorized: "Cloud token invalid or unauthorized", cloudBadResp: "Unexpected cloud response format", cloudFileMode: "Open the game via http://localhost, not file://",
     admin: "Admin", adminTitle: "Admin Panel", adminPlayer: "Player", adminGold: "Gold", adminXp: "XP",
     adminApply: "Apply Stats", adminBoost: "+500 Gold + XP", adminFillReady: "Fill Ready Crops", adminClear: "Clear Plots",
     adminWeatherSunny: "Weather: Sunny", adminWeatherRain: "Weather: Rain", adminWeatherHeat: "Weather: Hot", adminWeatherCold: "Weather: Cold",
-    adminCloudTitle: "Cloud Setup", adminCloudUrl: "Cloud URL", adminCloudGameId: "Game ID", adminCloudToken: "Access Token (optional)", adminCloudSave: "Save Cloud Config",
+    adminCloudTitle: "Cloud Setup", adminCloudUrl: "Cloud URL", adminCloudGameId: "Game ID", adminCloudToken: "Write Token (required for save)", adminCloudSave: "Save Cloud Config",
     adminDone: "Admin action complete",
     adminPending: "Pending Signups", adminApprove: "Approve", adminReject: "Reject", adminNoPending: "No pending signup requests",
     signupSubmitted: "Signup submitted and waiting for admin approval", signupNameExists: "Name already exists or pending", adminOnly: "Admin only",
     adminAuthTitle: "Admin Access", adminAuthUnlock: "Unlock", adminAuthSetup: "Set Token", adminTokenPh: "Enter admin token",
     adminTokenConfirmPh: "Re-enter token", adminSetupHint: "First use: set admin token (only SHA-256 hash is stored)",
-    adminUnlockHint: "Enter admin token to unlock", adminTokenTooShort: "Token must be at least 4 chars", adminTokenMismatch: "Tokens do not match",
+    adminUnlockHint: "Enter admin token to unlock", adminFixedHint: "Admin password is fixed: admin (SHA-256 hash stored only)", adminTokenTooShort: "Token must be at least 4 chars", adminTokenMismatch: "Tokens do not match",
     adminAuthBad: "Invalid admin token", adminAuthOk: "Admin unlocked", adminAuthSetOk: "Admin token configured",
     userAuthTitle: "Player Login", userAuthUnlock: "Login", userAuthSetup: "Set Player Token", userTokenPh: "Enter player token",
     userTokenConfirmPh: "Re-enter player token", userSetupHint: "First login for this player: set token (SHA-256 hash only)",
     userUnlockHint: "Enter player token to login", userAuthBad: "Invalid player token", userAuthOk: "Login success", userAuthSetOk: "Player token configured",
-    userNeedLogin: "Please login as player first"
+    userNeedLogin: "Please login as player first", loginPageTitle: "Login"
   },
   ja: {
     title: "🌱 QQファーム", tabMine: "自分の農場", tabVisit: "友だち訪問", bt: "Bluetooth",
     shop: "種ショップ", friends: "友だち農場", add: "プレイヤー追加", log: "農場ログ",
-    switchP: "プレイヤー切替", close: "閉じる", newP: "新規プレイヤー", cancel: "キャンセル", create: "作成", namePh: "ニックネーム（最大10）",
+    switchP: "プレイヤー切替", close: "閉じる", logout: "ログアウト", newP: "新規プレイヤー", cancel: "キャンセル", create: "作成", namePh: "ニックネーム（最大10）", locPh: "地域を入力（例: 東京）", passPh: "ログイン用パスワード（4文字以上）",
     farmMine: "の農場", farmVisit: "訪問中", tools: ["🌱 植える", "💧 水やり", "🌾 収穫", "🧪 肥料"],
     weather: "天気", wsunny: "晴れ", wrain: "雨（加速）", wheat: "猛暑（減速）", wcold: "寒波（減速）",
     empty: "空き地をタップ", ready: "収穫可能", withered: "枯れ", noGold: "コイン不足",
@@ -439,27 +455,27 @@ const I18N = {
     controlHint: "キーボード: WASD/矢印で移動、Spaceで実行、1-4でツール切替。Bluetooth文字コマンド: UP DOWN LEFT RIGHT ACT TOOL1 TOOL2 TOOL3 TOOL4。",
     btUnsup: "Web Bluetooth未対応", btConn: "Bluetooth接続中...", btOk: "Bluetooth接続済み", btFail: "Bluetooth接続失敗", btDisc: "Bluetooth切断",
     cloudSave: "クラウド保存", cloudLoad: "クラウド読込", cloudTest: "接続テスト", cloudCfg: "クラウド設定", cloudTitle: "Google Sheets クラウド設定",
-    cloudCfgSaved: "クラウド設定を保存", cloudNeedUrl: "先にURLを設定してください", cloudSaveOk: "クラウド保存成功", cloudLoadOk: "クラウド読込成功", cloudNoData: "クラウドに保存データがありません", cloudPingOk: "クラウド接続OK", cloudFail: "クラウド通信失敗", cloudBadUrl: "クラウドURLが無効です", cloudUnauthorized: "トークン無効または権限がありません", cloudBadResp: "クラウド応答形式が不正です",
+    cloudCfgSaved: "クラウド設定を保存", cloudNeedUrl: "先にURLを設定してください", cloudSaveOk: "クラウド保存成功", cloudLoadOk: "クラウド読込成功", cloudNoData: "クラウドに保存データがありません", cloudPingOk: "クラウド接続OK", cloudFail: "クラウド通信失敗", cloudBadUrl: "クラウドURLが無効です", cloudUnauthorized: "トークン無効または権限がありません", cloudBadResp: "クラウド応答形式が不正です", cloudFileMode: "file:// ではなく http://localhost で開いてください",
     admin: "管理", adminTitle: "管理パネル", adminPlayer: "プレイヤー", adminGold: "コイン", adminXp: "経験値",
     adminApply: "数値を反映", adminBoost: "コイン+500 / XP+500", adminFillReady: "全作物を成熟", adminClear: "畑をクリア",
     adminWeatherSunny: "天気: 晴", adminWeatherRain: "天気: 雨", adminWeatherHeat: "天気: 猛暑", adminWeatherCold: "天気: 寒波",
-    adminCloudTitle: "クラウド設定", adminCloudUrl: "クラウドURL", adminCloudGameId: "ゲームID", adminCloudToken: "アクセストークン(任意)", adminCloudSave: "クラウド設定を保存",
+    adminCloudTitle: "クラウド設定", adminCloudUrl: "クラウドURL", adminCloudGameId: "ゲームID", adminCloudToken: "書き込みトークン（保存時必須）", adminCloudSave: "クラウド設定を保存",
     adminDone: "管理操作を実行しました",
     adminPending: "承認待ち登録", adminApprove: "承認", adminReject: "拒否", adminNoPending: "承認待ち申請はありません",
     signupSubmitted: "登録申請を送信しました（管理者承認待ち）", signupNameExists: "名前は既に存在するか承認待ちです", adminOnly: "管理者のみ操作できます",
     adminAuthTitle: "管理者認証", adminAuthUnlock: "解除", adminAuthSetup: "トークン設定", adminTokenPh: "管理者トークンを入力",
     adminTokenConfirmPh: "トークンを再入力", adminSetupHint: "初回: 管理者トークンを設定（SHA-256ハッシュのみ保存）",
-    adminUnlockHint: "管理者トークンを入力して解除", adminTokenTooShort: "トークンは4文字以上", adminTokenMismatch: "トークンが一致しません",
+    adminUnlockHint: "管理者トークンを入力して解除", adminFixedHint: "管理者パスワードは固定: admin（SHA-256ハッシュのみ保存）", adminTokenTooShort: "トークンは4文字以上", adminTokenMismatch: "トークンが一致しません",
     adminAuthBad: "管理者トークンが無効", adminAuthOk: "管理者を解除しました", adminAuthSetOk: "管理者トークンを設定しました",
     userAuthTitle: "プレイヤーログイン", userAuthUnlock: "ログイン", userAuthSetup: "プレイヤートークン設定", userTokenPh: "プレイヤートークンを入力",
     userTokenConfirmPh: "トークンを再入力", userSetupHint: "このプレイヤー初回ログイン: トークン設定（SHA-256ハッシュのみ保存）",
     userUnlockHint: "プレイヤートークンを入力してログイン", userAuthBad: "プレイヤートークンが無効", userAuthOk: "ログイン成功", userAuthSetOk: "プレイヤートークンを設定しました",
-    userNeedLogin: "先にプレイヤーログインしてください"
+    userNeedLogin: "先にプレイヤーログインしてください", loginPageTitle: "ログイン"
   },
   es: {
     title: "🌱 Granja QQ", tabMine: "Mi Granja", tabVisit: "Visitar Amigo", bt: "Bluetooth",
     shop: "Tienda de Semillas", friends: "Amigos", add: "Agregar Jugador", log: "Registro",
-    switchP: "Cambiar Jugador", close: "Cerrar", newP: "Crear Jugador", cancel: "Cancelar", create: "Crear", namePh: "Apodo (max 10)",
+    switchP: "Cambiar Jugador", close: "Cerrar", logout: "Cerrar sesion", newP: "Crear Jugador", cancel: "Cancelar", create: "Crear", namePh: "Apodo (max 10)", locPh: "Ubicacion (ej. Madrid)", passPh: "Contrasena de acceso (min 4)",
     farmMine: " - granja", farmVisit: "Visitando", tools: ["🌱 Plantar", "💧 Regar", "🌾 Cosechar", "🧪 Fertilizar"],
     weather: "Clima", wsunny: "Soleado", wrain: "Lluvia (+velocidad)", wheat: "Calor (-velocidad)", wcold: "Ola fria (-velocidad)",
     empty: "Toca una parcela vacia", ready: "Listo", withered: "Marchito", noGold: "No hay oro suficiente",
@@ -467,27 +483,27 @@ const I18N = {
     controlHint: "Teclado: WASD/Flechas mover, Espacio actuar, 1-4 herramientas. Comandos Bluetooth: UP DOWN LEFT RIGHT ACT TOOL1 TOOL2 TOOL3 TOOL4.",
     btUnsup: "Web Bluetooth no compatible", btConn: "Conectando Bluetooth...", btOk: "Bluetooth conectado", btFail: "Fallo de Bluetooth", btDisc: "Bluetooth desconectado",
     cloudSave: "Guardar en Nube", cloudLoad: "Cargar de Nube", cloudTest: "Probar Conexion", cloudCfg: "Configurar Nube", cloudTitle: "Configuracion de Google Sheets",
-    cloudCfgSaved: "Configuracion guardada", cloudNeedUrl: "Primero configura la URL", cloudSaveOk: "Guardado en nube exitoso", cloudLoadOk: "Carga en nube exitosa", cloudNoData: "Aun no hay guardado en nube", cloudPingOk: "Conexion de nube correcta", cloudFail: "Fallo de solicitud en nube", cloudBadUrl: "URL de nube invalida", cloudUnauthorized: "Token invalido o sin permisos", cloudBadResp: "Formato de respuesta inesperado",
+    cloudCfgSaved: "Configuracion guardada", cloudNeedUrl: "Primero configura la URL", cloudSaveOk: "Guardado en nube exitoso", cloudLoadOk: "Carga en nube exitosa", cloudNoData: "Aun no hay guardado en nube", cloudPingOk: "Conexion de nube correcta", cloudFail: "Fallo de solicitud en nube", cloudBadUrl: "URL de nube invalida", cloudUnauthorized: "Token invalido o sin permisos", cloudBadResp: "Formato de respuesta inesperado", cloudFileMode: "Abre el juego con http://localhost, no con file://",
     admin: "Admin", adminTitle: "Panel de Admin", adminPlayer: "Jugador", adminGold: "Oro", adminXp: "XP",
     adminApply: "Aplicar valores", adminBoost: "+500 Oro + XP", adminFillReady: "Llenar cultivos listos", adminClear: "Limpiar parcelas",
     adminWeatherSunny: "Clima: Sol", adminWeatherRain: "Clima: Lluvia", adminWeatherHeat: "Clima: Calor", adminWeatherCold: "Clima: Frio",
-    adminCloudTitle: "Config de Nube", adminCloudUrl: "URL de nube", adminCloudGameId: "ID del juego", adminCloudToken: "Token de acceso (opcional)", adminCloudSave: "Guardar config de nube",
+    adminCloudTitle: "Config de Nube", adminCloudUrl: "URL de nube", adminCloudGameId: "ID del juego", adminCloudToken: "Token de escritura (requerido para guardar)", adminCloudSave: "Guardar config de nube",
     adminDone: "Accion admin completada",
     adminPending: "Solicitudes pendientes", adminApprove: "Aprobar", adminReject: "Rechazar", adminNoPending: "No hay solicitudes pendientes",
     signupSubmitted: "Solicitud enviada, esperando aprobacion del admin", signupNameExists: "El nombre ya existe o esta pendiente", adminOnly: "Solo admin",
     adminAuthTitle: "Acceso Admin", adminAuthUnlock: "Desbloquear", adminAuthSetup: "Configurar token", adminTokenPh: "Ingresa token admin",
     adminTokenConfirmPh: "Repite el token", adminSetupHint: "Primer uso: configura token admin (solo se guarda hash SHA-256)",
-    adminUnlockHint: "Ingresa token admin para desbloquear", adminTokenTooShort: "El token debe tener al menos 4 caracteres", adminTokenMismatch: "Los tokens no coinciden",
+    adminUnlockHint: "Ingresa token admin para desbloquear", adminFixedHint: "La clave admin es fija: admin (solo hash SHA-256)", adminTokenTooShort: "El token debe tener al menos 4 caracteres", adminTokenMismatch: "Los tokens no coinciden",
     adminAuthBad: "Token admin invalido", adminAuthOk: "Admin desbloqueado", adminAuthSetOk: "Token admin configurado",
     userAuthTitle: "Inicio de Jugador", userAuthUnlock: "Entrar", userAuthSetup: "Configurar token", userTokenPh: "Ingresa token de jugador",
     userTokenConfirmPh: "Repite el token", userSetupHint: "Primer acceso de este jugador: configura token (solo hash SHA-256)",
     userUnlockHint: "Ingresa token para entrar", userAuthBad: "Token de jugador invalido", userAuthOk: "Inicio exitoso", userAuthSetOk: "Token de jugador configurado",
-    userNeedLogin: "Primero inicia sesion como jugador"
+    userNeedLogin: "Primero inicia sesion como jugador", loginPageTitle: "Iniciar sesion"
   },
   ru: {
     title: "🌱 QQ Ферма", tabMine: "Моя ферма", tabVisit: "В гости", bt: "Bluetooth",
     shop: "Магазин семян", friends: "Друзья", add: "Добавить игрока", log: "Журнал",
-    switchP: "Сменить игрока", close: "Закрыть", newP: "Создать игрока", cancel: "Отмена", create: "Создать", namePh: "Ник (до 10)",
+    switchP: "Сменить игрока", close: "Закрыть", logout: "Выйти", newP: "Создать игрока", cancel: "Отмена", create: "Создать", namePh: "Ник (до 10)", locPh: "Локация (напр. Москва)", passPh: "Пароль входа (мин. 4)",
     farmMine: " ферма", farmVisit: "В гостях у", tools: ["🌱 Посадить", "💧 Полить", "🌾 Собрать", "🧪 Удобрить"],
     weather: "Погода", wsunny: "Солнечно", wrain: "Дождь (+скорость)", wheat: "Жара (-скорость)", wcold: "Холод (-скорость)",
     empty: "Нажмите на пустой участок", ready: "Готово", withered: "Завяло", noGold: "Недостаточно монет",
@@ -495,22 +511,22 @@ const I18N = {
     controlHint: "Клавиатура: WASD/стрелки - движение, Space - действие, 1-4 - инструменты. Команды Bluetooth: UP DOWN LEFT RIGHT ACT TOOL1 TOOL2 TOOL3 TOOL4.",
     btUnsup: "Web Bluetooth не поддерживается", btConn: "Подключение Bluetooth...", btOk: "Bluetooth подключен", btFail: "Ошибка Bluetooth", btDisc: "Bluetooth отключен",
     cloudSave: "Сохранить в облако", cloudLoad: "Загрузить из облака", cloudTest: "Проверить связь", cloudCfg: "Облако", cloudTitle: "Настройки Google Sheets",
-    cloudCfgSaved: "Настройки облака сохранены", cloudNeedUrl: "Сначала укажите URL", cloudSaveOk: "Сохранено в облаке", cloudLoadOk: "Загружено из облака", cloudNoData: "В облаке пока нет сохранения", cloudPingOk: "Облачное соединение ОК", cloudFail: "Ошибка запроса к облаку", cloudBadUrl: "Некорректный URL облака", cloudUnauthorized: "Неверный токен или нет доступа", cloudBadResp: "Некорректный формат ответа облака",
+    cloudCfgSaved: "Настройки облака сохранены", cloudNeedUrl: "Сначала укажите URL", cloudSaveOk: "Сохранено в облаке", cloudLoadOk: "Загружено из облака", cloudNoData: "В облаке пока нет сохранения", cloudPingOk: "Облачное соединение ОК", cloudFail: "Ошибка запроса к облаку", cloudBadUrl: "Некорректный URL облака", cloudUnauthorized: "Неверный токен или нет доступа", cloudBadResp: "Некорректный формат ответа облака", cloudFileMode: "Откройте игру через http://localhost, а не file://",
     admin: "Админ", adminTitle: "Панель админа", adminPlayer: "Игрок", adminGold: "Монеты", adminXp: "Опыт",
     adminApply: "Применить", adminBoost: "+500 монет + опыта", adminFillReady: "Заполнить готовыми", adminClear: "Очистить участки",
     adminWeatherSunny: "Погода: Солнце", adminWeatherRain: "Погода: Дождь", adminWeatherHeat: "Погода: Жара", adminWeatherCold: "Погода: Холод",
-    adminCloudTitle: "Облачные настройки", adminCloudUrl: "URL облака", adminCloudGameId: "ID игры", adminCloudToken: "Токен доступа (опц.)", adminCloudSave: "Сохранить облако",
+    adminCloudTitle: "Облачные настройки", adminCloudUrl: "URL облака", adminCloudGameId: "ID игры", adminCloudToken: "Токен записи (нужен для сохранения)", adminCloudSave: "Сохранить облако",
     adminDone: "Админ-действие выполнено",
     adminPending: "Ожидают одобрения", adminApprove: "Одобрить", adminReject: "Отклонить", adminNoPending: "Нет заявок на одобрение",
     signupSubmitted: "Заявка отправлена и ждет одобрения админа", signupNameExists: "Имя уже существует или ожидает одобрения", adminOnly: "Только админ",
     adminAuthTitle: "Доступ админа", adminAuthUnlock: "Разблокировать", adminAuthSetup: "Задать токен", adminTokenPh: "Введите токен админа",
     adminTokenConfirmPh: "Повторите токен", adminSetupHint: "Первый запуск: задайте токен (сохраняется только SHA-256 хеш)",
-    adminUnlockHint: "Введите токен для разблокировки", adminTokenTooShort: "Токен минимум 4 символа", adminTokenMismatch: "Токены не совпадают",
+    adminUnlockHint: "Введите токен для разблокировки", adminFixedHint: "Пароль админа фиксирован: admin (хранится только SHA-256)", adminTokenTooShort: "Токен минимум 4 символа", adminTokenMismatch: "Токены не совпадают",
     adminAuthBad: "Неверный токен админа", adminAuthOk: "Админ разблокирован", adminAuthSetOk: "Токен админа сохранен",
     userAuthTitle: "Вход игрока", userAuthUnlock: "Войти", userAuthSetup: "Задать токен", userTokenPh: "Введите токен игрока",
     userTokenConfirmPh: "Повторите токен", userSetupHint: "Первый вход игрока: задайте токен (только SHA-256 хеш)",
     userUnlockHint: "Введите токен игрока для входа", userAuthBad: "Неверный токен игрока", userAuthOk: "Вход выполнен", userAuthSetOk: "Токен игрока сохранен",
-    userNeedLogin: "Сначала войдите как игрок"
+    userNeedLogin: "Сначала войдите как игрок", loginPageTitle: "Вход"
   }
 };
 
@@ -536,9 +552,12 @@ const TOOLS = ["plant", "water", "harvest", "fertilize"];
 const AVATARS = ["👨‍🌾", "👩‍🌾", "🧑‍🌾", "🐱", "🐶", "🐼", "🦊", "🦝", "🧙"];
 const GAME_STATE_KEY = "qqfarm_game_v5";
 const ADMIN_AUTH_KEY = "qqfarm_admin_auth_v1";
+const ADMIN_FIXED_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbyGIGcR3pJq89J3e8xJ7Vx734szuXbyVqvg_H7_93Dr1yz6RQwSRehhphv6l62aZjXi-w/exec"
+const DEFAULT_CLOUD_WRITE_TOKEN = "qqfarm_wt_7f4c9d2a8b1e6c3d5f0a";
 
 let S = {
-  lang: "zh",
+  lang: "en",
   players: {},
   currentId: null,
   viewId: null,
@@ -548,9 +567,9 @@ let S = {
   steals: {},
   cursor: 0,
   cloud: {
-    url: "",
+    url: DEFAULT_CLOUD_URL,
     gameId: "qqfarm_default",
-    token: ""
+    token: DEFAULT_CLOUD_WRITE_TOKEN
   },
   admin: {
     tokenHash: "",
@@ -624,6 +643,8 @@ function load() {
       };
     }
   } catch (_) {}
+  S.cloud.url = S.cloud.url || DEFAULT_CLOUD_URL;
+  S.cloud.token = S.cloud.token || DEFAULT_CLOUD_WRITE_TOKEN;
   loadAdminAuthLocal();
 }
 
@@ -633,9 +654,9 @@ async function sha256Hex(text) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function makePlayer(name, avatar) {
+function makePlayer(name, avatar, location = "") {
   const id = "p" + Date.now() + Math.random().toString(36).slice(2, 6);
-  return { id, name, avatar, gold: 120, xp: 0, plots: Array.from({ length: MAX_PLOTS }, () => ({ crop: null, plantedAt: 0, wateredAt: 0, fertilizedAt: 0 })) };
+  return { id, name, avatar, location, gold: 120, xp: 0, plots: Array.from({ length: MAX_PLOTS }, () => ({ crop: null, plantedAt: 0, wateredAt: 0, fertilizedAt: 0 })) };
 }
 
 function levelInfo(xp) {
@@ -717,6 +738,9 @@ function addLog(txt) {
 }
 
 async function cloudRequest(action) {
+  if (location.protocol === "file:") {
+    throw new Error("CLOUD_FILE_MODE");
+  }
   const url = (S.cloud.url || "").trim();
   if (!url) {
     notice(tr("cloudNeedUrl"), "err");
@@ -729,14 +753,15 @@ async function cloudRequest(action) {
   const payload = {
     action,
     gameId: S.cloud.gameId || "qqfarm_default",
-    token: S.cloud.token || "",
+    token: action === "save" ? (S.cloud.token || "") : "",
     state: action === "save" ? S : undefined,
     ts: Date.now()
   };
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    // Use a simple request content type to avoid CORS preflight with Apps Script.
+    headers: { "Content-Type": "text/plain;charset=UTF-8" },
     body: JSON.stringify(payload)
   });
 
@@ -755,6 +780,9 @@ async function cloudRequest(action) {
   if (!data || typeof data !== "object") {
     throw new Error("CLOUD_BAD_RESPONSE");
   }
+  if (data.ok === false && data.error === "unauthorized") {
+    throw new Error("CLOUD_UNAUTHORIZED");
+  }
   return data;
 }
 
@@ -762,6 +790,10 @@ function cloudErrorNotice(err) {
   const msg = String((err && err.message) || "");
   if (msg === "CLOUD_BAD_URL") {
     notice(tr("cloudBadUrl"), "err");
+    return;
+  }
+  if (msg === "CLOUD_FILE_MODE") {
+    notice(tr("cloudFileMode"), "err");
     return;
   }
   if (msg === "CLOUD_UNAUTHORIZED" || msg.includes("HTTP_401") || msg.includes("HTTP_403")) {
@@ -832,11 +864,20 @@ async function loadFromCloud() {
 
 async function testCloudConnection() {
   try {
-    const data = await cloudRequest("load");
+    let data = await cloudRequest("ping");
     if (!data) return;
-    if ((data.ok && (data.state || data.state === null)) || (data.ok === false && data.error === "not_found")) {
+    if (data.ok) {
       notice(tr("cloudPingOk"), "info");
       return;
+    }
+    // Backward compatibility: older Apps Script deployments may not support ping yet.
+    if (data.ok === false && data.error === "bad_action") {
+      data = await cloudRequest("load");
+      if (!data) return;
+      if (data.ok || (data.ok === false && data.error === "not_found")) {
+        notice(tr("cloudPingOk"), "info");
+        return;
+      }
     }
     throw new Error("bad response");
   } catch (e) {
@@ -998,6 +1039,7 @@ function adminApproveSignup(reqId) {
   S.players[p.id] = p;
   S.admin.pendingSignups.splice(idx, 1);
   save();
+  saveAuthSnapshotToCloud();
   render();
   renderAdminPending();
   notice(tr("adminDone"), "info");
@@ -1013,7 +1055,7 @@ function adminRejectSignup(reqId) {
 }
 
 function openAdminAuth() {
-  const setupMode = !S.admin.tokenHash;
+  const setupMode = false;
   document.getElementById("adminAuthModal").classList.add("show");
   document.getElementById("adminAuthTitle").textContent = tr("adminAuthTitle");
   document.getElementById("adminAuthCancel").textContent = tr("cancel");
@@ -1021,7 +1063,7 @@ function openAdminAuth() {
   document.getElementById("adminAuthSetup").textContent = tr("adminAuthSetup");
   document.getElementById("adminToken").placeholder = tr("adminTokenPh");
   document.getElementById("adminTokenConfirm").placeholder = tr("adminTokenConfirmPh");
-  document.getElementById("adminAuthHint").textContent = setupMode ? tr("adminSetupHint") : tr("adminUnlockHint");
+  document.getElementById("adminAuthHint").textContent = tr("adminFixedHint");
   document.getElementById("adminAuthSetup").classList.toggle("hidden", !setupMode);
   document.getElementById("adminAuthUnlock").classList.toggle("hidden", setupMode);
   document.getElementById("adminTokenConfirm").classList.toggle("hidden", !setupMode);
@@ -1060,14 +1102,13 @@ async function unlockAdmin() {
 }
 
 function requestAdminOpen() {
-  if (S.currentId !== S.admin.adminId) return notice(tr("adminOnly"), "err");
   if (adminUnlocked) return openAdmin();
   openAdminAuth();
 }
 
 function openUserAuth() {
   const playerId = S.currentId;
-  const hasHash = !!(playerId && S.userAuth.userHashes[playerId]);
+  const p = S.players[playerId];
   const mustLogin = userUnlockedId !== playerId;
   document.getElementById("userAuthModal").classList.add("show");
   document.getElementById("userAuthTitle").textContent = tr("userAuthTitle");
@@ -1076,10 +1117,11 @@ function openUserAuth() {
   document.getElementById("userAuthSetup").textContent = tr("userAuthSetup");
   document.getElementById("userToken").placeholder = tr("userTokenPh");
   document.getElementById("userTokenConfirm").placeholder = tr("userTokenConfirmPh");
-  document.getElementById("userAuthHint").textContent = hasHash ? tr("userUnlockHint") : tr("userSetupHint");
-  document.getElementById("userAuthSetup").classList.toggle("hidden", hasHash);
-  document.getElementById("userAuthUnlock").classList.toggle("hidden", !hasHash);
-  document.getElementById("userTokenConfirm").classList.toggle("hidden", hasHash);
+  const locTxt = p && p.location ? " (" + p.location + ")" : "";
+  document.getElementById("userAuthHint").textContent = tr("userUnlockHint") + locTxt;
+  document.getElementById("userAuthSetup").classList.add("hidden");
+  document.getElementById("userAuthUnlock").classList.remove("hidden");
+  document.getElementById("userTokenConfirm").classList.add("hidden");
   document.getElementById("userAuthCancel").classList.toggle("hidden", mustLogin);
   document.getElementById("userToken").value = "";
   document.getElementById("userTokenConfirm").value = "";
@@ -1088,6 +1130,63 @@ function openUserAuth() {
 function closeUserAuth() {
   if (userUnlockedId !== S.currentId) return;
   document.getElementById("userAuthModal").classList.remove("show");
+}
+
+function syncLoginPlayers() {
+  const sel = document.getElementById("loginPlayer");
+  if (!sel) return;
+  sel.innerHTML = "";
+  Object.values(S.players).forEach((p) => {
+    const op = document.createElement("option");
+    op.value = p.id;
+    op.textContent = p.avatar + " " + p.name + (p.location ? " · " + p.location : "");
+    sel.appendChild(op);
+  });
+  if (S.currentId && S.players[S.currentId]) {
+    sel.value = S.currentId;
+  }
+}
+
+function openLoginPage() {
+  syncLoginPlayers();
+  document.getElementById("loginTitle").textContent = tr("loginPageTitle");
+  document.getElementById("loginPassword").placeholder = tr("userTokenPh");
+  document.getElementById("loginCreate").textContent = tr("newP");
+  document.getElementById("loginSubmit").textContent = tr("userAuthUnlock");
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginModal").classList.add("show");
+}
+
+function closeLoginPage() {
+  document.getElementById("loginModal").classList.remove("show");
+}
+
+async function submitLoginPage() {
+  const sel = document.getElementById("loginPlayer");
+  const playerId = sel.value;
+  if (!playerId || !S.players[playerId]) return;
+  if (!S.userAuth.userHashes[playerId]) return notice(tr("userAuthBad"), "err");
+  const token = document.getElementById("loginPassword").value;
+  const hash = await sha256Hex(token);
+  if (hash !== S.userAuth.userHashes[playerId]) return notice(tr("userAuthBad"), "err");
+  S.currentId = playerId;
+  S.viewId = null;
+  userUnlockedId = playerId;
+  closeLoginPage();
+  render();
+  notice(tr("userAuthOk"), "info");
+}
+
+function logoutCurrentUser() {
+  S.currentId = null;
+  S.viewId = null;
+  userUnlockedId = null;
+  adminUnlocked = false;
+  closeAdmin();
+  closeSwitch();
+  closeLoginPage();
+  save();
+  render();
 }
 
 async function setupUserToken() {
@@ -1108,6 +1207,7 @@ async function setupUserToken() {
 async function unlockUser() {
   const playerId = S.currentId;
   if (!playerId) return;
+  if (!S.userAuth.userHashes[playerId]) return notice(tr("userAuthBad"), "err");
   const token = document.getElementById("userToken").value;
   const hash = await sha256Hex(token);
   if (hash !== S.userAuth.userHashes[playerId]) return notice(tr("userAuthBad"), "err");
@@ -1119,7 +1219,7 @@ async function unlockUser() {
 function ensureUserLogin() {
   if (!S.currentId) return;
   if (userUnlockedId === S.currentId) return;
-  openUserAuth();
+  openLoginPage();
 }
 
 function actPlot(idx) {
@@ -1219,6 +1319,7 @@ function renderText() {
   document.getElementById("addTitle").textContent = tr("newP");
   document.getElementById("addCancel").textContent = tr("cancel");
   document.getElementById("addConfirm").textContent = tr("create");
+  document.getElementById("logoutBtn").textContent = tr("logout");
   document.getElementById("adminBtn").textContent = tr("admin");
   document.getElementById("adminTitle").textContent = tr("adminTitle");
   document.getElementById("adminPlayerLabel").textContent = tr("adminPlayer");
@@ -1255,6 +1356,8 @@ function renderText() {
   document.getElementById("userToken").placeholder = tr("userTokenPh");
   document.getElementById("userTokenConfirm").placeholder = tr("userTokenConfirmPh");
   document.getElementById("newName").placeholder = tr("namePh");
+  document.getElementById("newLocation").placeholder = tr("locPh");
+  document.getElementById("newPassword").placeholder = tr("passPh");
   document.getElementById("controlHint").textContent = tr("controlHint");
 
   const btBtn = document.getElementById("btBtn");
@@ -1275,7 +1378,18 @@ function renderText() {
 
 function renderHeader() {
   const me = S.players[S.currentId];
-  if (!me) return;
+  if (!me) {
+    document.getElementById("hdrAvatar").textContent = "🌾";
+    document.getElementById("hdrName").textContent = "Guest";
+    document.getElementById("hdrLevel").textContent = "Lv.1";
+    document.getElementById("hdrGold").textContent = "0";
+    document.getElementById("tabMine").classList.remove("active");
+    document.getElementById("tabVisit").classList.remove("active");
+    document.getElementById("farmTitle").textContent = tr("loginPageTitle");
+    document.getElementById("topRank").textContent = "";
+    document.getElementById("weather").textContent = "";
+    return;
+  }
   const info = levelInfo(me.xp);
   document.getElementById("hdrAvatar").textContent = me.avatar;
   document.getElementById("hdrName").textContent = me.name;
@@ -1306,6 +1420,7 @@ function renderHeader() {
 function renderToolbar() {
   const bar = document.getElementById("toolbar");
   bar.innerHTML = "";
+  if (!S.currentId) return;
   const visiting = !!S.viewId && S.viewId !== S.currentId;
   if (visiting) {
     const day = new Date().toDateString();
@@ -1330,6 +1445,7 @@ function renderToolbar() {
 function renderShop() {
   const shop = document.getElementById("shop");
   shop.innerHTML = "";
+  if (!S.currentId) return;
   Object.keys(CROPS).forEach((key) => {
     const c = CROPS[key];
     const el = document.createElement("div");
@@ -1355,6 +1471,7 @@ function friendReady(p) {
 function renderFriends() {
   const box = document.getElementById("friends");
   box.innerHTML = "";
+  if (!S.currentId) return;
   Object.values(S.players)
     .filter((p) => p.id !== S.currentId)
     .forEach((p) => {
@@ -1372,6 +1489,7 @@ function renderFriends() {
 function renderGrid() {
   const grid = document.getElementById("grid");
   grid.innerHTML = "";
+  if (!S.currentId) return;
   const owner = S.players[S.viewId || S.currentId];
   if (!owner) return;
   const now = Date.now();
@@ -1544,10 +1662,12 @@ function openAdd() {
   AVATARS.forEach((av) => {
     const op = document.createElement("option");
     op.value = av;
-    op.textContent = av + " " + av;
+    op.textContent = av;
     sel.appendChild(op);
   });
   document.getElementById("newName").value = "";
+  document.getElementById("newLocation").value = "";
+  document.getElementById("newPassword").value = "";
   document.getElementById("addModal").classList.add("show");
 }
 function closeAdd() { document.getElementById("addModal").classList.remove("show"); }
@@ -1568,24 +1688,28 @@ function bindUI() {
   document.getElementById("addBtn").addEventListener("click", openAdd);
   document.getElementById("addCancel").addEventListener("click", closeAdd);
   document.getElementById("addModal").addEventListener("click", (e) => { if (e.target.id === "addModal") closeAdd(); });
-  document.getElementById("addConfirm").addEventListener("click", () => {
+  document.getElementById("addConfirm").addEventListener("click", async () => {
     const name = document.getElementById("newName").value.trim();
+    const location = document.getElementById("newLocation").value.trim();
+    const password = document.getElementById("newPassword").value;
     const av = document.getElementById("newAvatar").value || AVATARS[0];
     if (!name) return;
+    if (!location) return;
+    if (!password || password.length < 4) return notice(tr("adminTokenTooShort"), "err");
     const exists = Object.values(S.players).some((p) => normalizeName(p.name) === normalizeName(name));
-    const pendingExists = (S.admin.pendingSignups || []).some((r) => normalizeName(r.name) === normalizeName(name));
-    if (exists || pendingExists) return notice(tr("signupNameExists"), "err");
-    S.admin.pendingSignups.push({
-      id: "r" + Date.now() + Math.random().toString(36).slice(2, 5),
-      name,
-      avatar: av,
-      createdAt: Date.now()
-    });
-    addLog("📝 " + name + " signup pending");
+    if (exists) return notice(tr("signupNameExists"), "err");
+    const p = makePlayer(name, av, location);
+    S.players[p.id] = p;
+    S.userAuth.userHashes[p.id] = await sha256Hex(password);
+    S.currentId = p.id;
+    userUnlockedId = p.id;
+    addLog("🆕 " + p.name + " joined");
     closeAdd();
+    closeLoginPage();
     save();
+    saveAuthSnapshotToCloud();
     render();
-    notice(tr("signupSubmitted"), "info");
+    notice(tr("userAuthSetOk"), "info");
   });
 
   document.getElementById("tabMine").addEventListener("click", () => { S.viewId = null; save(); render(); });
@@ -1598,6 +1722,11 @@ function bindUI() {
 
   document.getElementById("btBtn").addEventListener("click", connectBluetooth);
   document.getElementById("adminBtn").addEventListener("click", requestAdminOpen);
+  document.getElementById("logoutBtn").addEventListener("click", logoutCurrentUser);
+
+  document.getElementById("loginCreate").addEventListener("click", openAdd);
+  document.getElementById("loginSubmit").addEventListener("click", submitLoginPage);
+  document.getElementById("loginModal").addEventListener("click", (e) => { if (e.target.id === "loginModal") {} });
 
   document.getElementById("adminClose").addEventListener("click", closeAdmin);
   document.getElementById("adminModal").addEventListener("click", (e) => { if (e.target.id === "adminModal") closeAdmin(); });
@@ -1669,22 +1798,24 @@ function loop() {
   save();
 }
 
-load();
-if (!Object.keys(S.players).length) {
-  const p = makePlayer("Farmer", "👨‍🌾");
-  S.players[p.id] = p;
-  S.currentId = p.id;
-  S.admin.adminId = p.id;
-  addLog("🌾 Welcome to QQ Farm");
+async function boot() {
+  load();
+  S.lang = "en";
+  S.admin.tokenHash = ADMIN_FIXED_HASH;
+  if (!S.admin.adminId || !S.players[S.admin.adminId]) {
+    S.admin.adminId = S.currentId;
+  }
+  saveAdminAuthLocal();
+  bindUI();
+  if ((S.cloud.url || "").trim()) {
+    await loadFromCloud();
+  }
+  render();
+  openLoginPage();
+  setInterval(loop, 1000);
 }
-if (!S.admin.adminId || !S.players[S.admin.adminId]) {
-  S.admin.adminId = S.currentId;
-}
-saveAdminAuthLocal();
-bindUI();
-render();
-ensureUserLogin();
-setInterval(loop, 1000);
+
+boot();
 </script>
 </body>
 </html>
