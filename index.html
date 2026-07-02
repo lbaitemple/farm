@@ -235,6 +235,45 @@ body {
 }
 .pad-inner { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .pad-btn { border: none; border-radius: 9px; min-height: 42px; background: rgba(255,255,255,.18); color: var(--txt); font-weight: 700; }
+.battle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 2px solid rgba(245,203,62,.7);
+  border-radius: 12px;
+  background: linear-gradient(140deg, rgba(173,47,50,.5), rgba(217,144,61,.42));
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.plot-badge-battle { position: absolute; top: 3px; right: 4px; font-size: 12px; }
+.battle-modal { width: min(94vw, 380px); text-align: center; }
+.battle-subtitle { font-size: 12px; opacity: .85; margin-bottom: 4px; }
+.battle-instructions { font-size: 11px; opacity: .8; margin-bottom: 8px; }
+.battle-stats { display: flex; justify-content: center; gap: 18px; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.battle-grid {
+  display: grid;
+  gap: 4px;
+  aspect-ratio: 1;
+  margin: 0 auto 10px;
+  max-width: 280px;
+  transition: transform 60ms ease;
+}
+.battle-grid.shake { animation: battleShake 220ms ease; }
+@keyframes battleShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.battle-cell { aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+.battle-cell.on-path { background: rgba(255,255,255,.16); }
+.battle-cell.done { background: linear-gradient(140deg, #4ecf76, #2e9450); }
+.battle-cell.target { background: rgba(245,203,62,.75); box-shadow: 0 0 8px rgba(245,203,62,.85); }
+.battle-cell.marker { outline: 2px solid #fff; outline-offset: -2px; }
+@media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 980px) { .main { grid-template-columns: 1fr; } }
 @media (max-width: 780px) {
   .farm-body { grid-template-columns: 1fr; }
@@ -275,6 +314,7 @@ body {
         </div>
         <div id="weather" class="weather"></div>
       </div>
+      <div id="battleBar" class="battle-bar hidden"></div>
       <div id="toolbar" class="toolbar"></div>
       <div class="farm-body">
         <div class="leader-panel">
@@ -433,6 +473,23 @@ body {
   </div>
 </div>
 
+<div id="battleModal" class="overlay">
+  <div class="modal battle-modal">
+    <h2 id="battleTitle"></h2>
+    <div id="battleSubtitle" class="battle-subtitle"></div>
+    <div id="battleInstructions" class="battle-instructions"></div>
+    <div class="battle-stats">
+      <div><span id="battleTimeLabel"></span>: <span id="battleTimer">0.0s</span></div>
+      <div><span id="battleMistakesLabel"></span>: <span id="battleMistakes">0</span></div>
+    </div>
+    <div id="battleGrid" class="battle-grid"></div>
+    <div class="modal-actions">
+      <button id="battleGiveUp" class="btn"></button>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
 <script>
 const I18N = {
   zh: {
@@ -463,7 +520,12 @@ const I18N = {
     userAuthTitle: "玩家登录", userAuthUnlock: "登录", userAuthSetup: "设置玩家口令", userTokenPh: "输入玩家口令",
     userTokenConfirmPh: "再次输入玩家口令", userSetupHint: "首次登录此玩家：请设置口令（仅保存SHA-256哈希）",
     userUnlockHint: "输入玩家口令登录", userAuthBad: "玩家口令错误", userAuthOk: "登录成功", userAuthSetOk: "玩家口令已设置",
-    userNeedLogin: "请先完成玩家登录", loginPageTitle: "登录页面"
+    userNeedLogin: "请先完成玩家登录", loginPageTitle: "登录页面",
+    battleTitle: "偷菜对决", battleVs: "对战", battleFight: "开始对战", battleQueuePos: "排队中，你是第 {n} 位，等待与 {name} 对战",
+    battleIncoming: "{name} 向你发起偷菜挑战，争夺你的{crop}！", battleChallenge: "挑战 {name}，偷取{crop}！", battleWaitingOpponent: "等待 {name} 完成挑战...",
+    battleStarted: "对战开始！描摹路径以取胜。", battleQueued: "挑战已排队，等待轮到你。", battleAlreadyQueued: "你已经对该地块发起过挑战。",
+    battleWon: "你赢得了对决！", battleLost: "你输掉了对决。", battleSubmitted: "已提交你的成绩，等待结果。",
+    battleInstructions: "用方向键/WASD 沿发光路径描摹，越快越准越好！", battleMistakesLabel: "失误", battleTimeLabel: "用时", battleClose: "放弃"
   },
   en: {
     title: "🌱 QQ Farm", tabMine: "My Farm", tabVisit: "Visit Friend", bt: "Bluetooth",
@@ -493,7 +555,12 @@ const I18N = {
     userAuthTitle: "Player Login", userAuthUnlock: "Login", userAuthSetup: "Set Player Token", userTokenPh: "Enter player token",
     userTokenConfirmPh: "Re-enter player token", userSetupHint: "First login for this player: set token (SHA-256 hash only)",
     userUnlockHint: "Enter player token to login", userAuthBad: "Invalid player token", userAuthOk: "Login success", userAuthSetOk: "Player token configured",
-    userNeedLogin: "Please login as player first", loginPageTitle: "Login"
+    userNeedLogin: "Please login as player first", loginPageTitle: "Login",
+    battleTitle: "Steal Duel", battleVs: "vs", battleFight: "Battle!", battleQueuePos: "You're #{n} in line to battle {name}",
+    battleIncoming: "{name} challenges you for your {crop}!", battleChallenge: "Battle {name} to steal their {crop}!", battleWaitingOpponent: "Waiting for {name} to finish...",
+    battleStarted: "Battle started! Trace the path to win.", battleQueued: "Challenge queued — waiting for your turn.", battleAlreadyQueued: "You already have a pending challenge for this plot.",
+    battleWon: "You won the trace race!", battleLost: "You lost the trace race.", battleSubmitted: "Attempt submitted, waiting for result.",
+    battleInstructions: "Trace the glowing path with arrows/WASD before time runs out!", battleMistakesLabel: "Mistakes", battleTimeLabel: "Time", battleClose: "Forfeit"
   },
   ja: {
     title: "🌱 QQファーム", tabMine: "自分の農場", tabVisit: "友だち訪問", bt: "Bluetooth",
@@ -523,7 +590,12 @@ const I18N = {
     userAuthTitle: "プレイヤーログイン", userAuthUnlock: "ログイン", userAuthSetup: "プレイヤートークン設定", userTokenPh: "プレイヤートークンを入力",
     userTokenConfirmPh: "トークンを再入力", userSetupHint: "このプレイヤー初回ログイン: トークン設定（SHA-256ハッシュのみ保存）",
     userUnlockHint: "プレイヤートークンを入力してログイン", userAuthBad: "プレイヤートークンが無効", userAuthOk: "ログイン成功", userAuthSetOk: "プレイヤートークンを設定しました",
-    userNeedLogin: "先にプレイヤーログインしてください", loginPageTitle: "ログイン"
+    userNeedLogin: "先にプレイヤーログインしてください", loginPageTitle: "ログイン",
+    battleTitle: "盗み対決", battleVs: "対", battleFight: "対戦！", battleQueuePos: "{name} との対戦待ち、あなたは{n}番目です",
+    battleIncoming: "{name} があなたの{crop}を狙って挑戦してきました！", battleChallenge: "{name} に挑戦して{crop}を盗もう！", battleWaitingOpponent: "{name} の結果を待っています...",
+    battleStarted: "対戦開始！パスをなぞって勝利しよう。", battleQueued: "挑戦を登録しました。順番をお待ちください。", battleAlreadyQueued: "この畑にはすでに挑戦済みです。",
+    battleWon: "対決に勝利しました！", battleLost: "対決に敗れました。", battleSubmitted: "結果を送信しました。判定をお待ちください。",
+    battleInstructions: "矢印キー/WASDで光る道をなぞろう！速く正確に！", battleMistakesLabel: "ミス", battleTimeLabel: "タイム", battleClose: "棄権"
   },
   es: {
     title: "🌱 Granja QQ", tabMine: "Mi Granja", tabVisit: "Visitar Amigo", bt: "Bluetooth",
@@ -552,7 +624,12 @@ const I18N = {
     userAuthTitle: "Inicio de Jugador", userAuthUnlock: "Entrar", userAuthSetup: "Configurar token", userTokenPh: "Ingresa token de jugador",
     userTokenConfirmPh: "Repite el token", userSetupHint: "Primer acceso de este jugador: configura token (solo hash SHA-256)",
     userUnlockHint: "Ingresa token para entrar", userAuthBad: "Token de jugador invalido", userAuthOk: "Inicio exitoso", userAuthSetOk: "Token de jugador configurado",
-    userNeedLogin: "Primero inicia sesion como jugador", loginPageTitle: "Iniciar sesion"
+    userNeedLogin: "Primero inicia sesion como jugador", loginPageTitle: "Iniciar sesion",
+    battleTitle: "Duelo de robo", battleVs: "vs", battleFight: "¡Batalla!", battleQueuePos: "Eres el #{n} en la fila para enfrentar a {name}",
+    battleIncoming: "¡{name} te desafía por tu {crop}!", battleChallenge: "¡Desafía a {name} para robar su {crop}!", battleWaitingOpponent: "Esperando a que {name} termine...",
+    battleStarted: "¡Batalla iniciada! Traza el camino para ganar.", battleQueued: "Desafío en cola, espera tu turno.", battleAlreadyQueued: "Ya tienes un desafío pendiente para esta parcela.",
+    battleWon: "¡Ganaste el duelo!", battleLost: "Perdiste el duelo.", battleSubmitted: "Intento enviado, esperando resultado.",
+    battleInstructions: "¡Traza el camino con flechas/WASD antes de que se acabe el tiempo!", battleMistakesLabel: "Errores", battleTimeLabel: "Tiempo", battleClose: "Rendirse"
   },
   ru: {
     title: "🌱 QQ Ферма", tabMine: "Моя ферма", tabVisit: "В гости", bt: "Bluetooth",
@@ -581,7 +658,12 @@ const I18N = {
     userAuthTitle: "Вход игрока", userAuthUnlock: "Войти", userAuthSetup: "Задать токен", userTokenPh: "Введите токен игрока",
     userTokenConfirmPh: "Повторите токен", userSetupHint: "Первый вход игрока: задайте токен (только SHA-256 хеш)",
     userUnlockHint: "Введите токен игрока для входа", userAuthBad: "Неверный токен игрока", userAuthOk: "Вход выполнен", userAuthSetOk: "Токен игрока сохранен",
-    userNeedLogin: "Сначала войдите как игрок", loginPageTitle: "Вход"
+    userNeedLogin: "Сначала войдите как игрок", loginPageTitle: "Вход",
+    battleTitle: "Дуэль за урожай", battleVs: "против", battleFight: "В бой!", battleQueuePos: "Вы №{n} в очереди на бой с {name}",
+    battleIncoming: "{name} вызывает вас на бой за ваш {crop}!", battleChallenge: "Вызовите {name} на бой, чтобы украсть {crop}!", battleWaitingOpponent: "Ожидание завершения хода {name}...",
+    battleStarted: "Бой начался! Обведите путь, чтобы победить.", battleQueued: "Вызов в очереди, ожидайте своего хода.", battleAlreadyQueued: "У вас уже есть вызов для этого участка.",
+    battleWon: "Вы выиграли дуэль!", battleLost: "Вы проиграли дуэль.", battleSubmitted: "Попытка отправлена, ожидайте результат.",
+    battleInstructions: "Обведите светящийся путь стрелками/WASD, пока не закончилось время!", battleMistakesLabel: "Ошибки", battleTimeLabel: "Время", battleClose: "Сдаться"
   }
 };
 
@@ -608,10 +690,27 @@ const AVATARS = ["👨‍🌾", "👩‍🌾", "🧑‍🌾", "🐱", "🐶", "�
 const GAME_STATE_KEY = "qqfarm_game_v5";
 const ADMIN_AUTH_KEY = "qqfarm_admin_auth_v1";
 const ADMIN_FIXED_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
-const DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbzX7C3cXiTOONk7nXe83-_peYe1mVakfXZ0vBjxUmuxLXr1zCOR0vw20Ub5vFnKmPCH3Q/exec"
-const DEFAULT_CLOUD_WRITE_TOKEN = "qqfarm_wt_7f4c9d2a8b1e6c3d5f0a";
+// Populated by config.js (gitignored locally, generated from repo secrets on
+// GitHub Pages deploy). Falls back to empty/disabled if config.js is absent.
+const CLOUD_CONFIG = (typeof window !== "undefined" && window.CLOUD_CONFIG) || {};
+const DEFAULT_CLOUD_URL = CLOUD_CONFIG.url || "";
+const DEFAULT_CLOUD_WRITE_TOKEN = CLOUD_CONFIG.token || "";
+const DEFAULT_CLOUD_GAME_ID = CLOUD_CONFIG.gameId || "qqfarm_default";
 const AUTO_CLOUD_SYNC_MS = 2200;
 const AUTO_CLOUD_RETRY_MS = 6000;
+
+// A steal against an "active" owner turns into an async trace-race battle
+// instead of an instant steal. Owner presence is a heartbeat, not a live
+// signal, so this window has to be generous enough to survive normal polling
+// gaps rather than flickering the owner "offline" between ticks.
+const BATTLE_ACTIVE_WINDOW_MS = 45000;
+const BATTLE_HEARTBEAT_MS = 8000;
+const BATTLE_TIME_LIMIT_MS = 60000;
+const BATTLE_MISTAKE_PENALTY_MS = 2000;
+const BATTLE_GRID_SIZE = 6;
+const BATTLE_PATH_LEN = 9;
+const BATTLE_MAX_AGE_MS = 3600000;
+const DIR_KEYS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 
 let S = {
   lang: "en",
@@ -620,12 +719,13 @@ let S = {
   viewId: null,
   seed: "radish",
   tool: "plant",
-  weather: { ...WEATHER[0], until: Date.now() + 120000 },
+  weather: { ...WEATHER[0], until: Date.now() + 120000, setAt: Date.now() },
   steals: {},
+  battles: {},
   cursor: 0,
   cloud: {
     url: DEFAULT_CLOUD_URL,
-    gameId: "qqfarm_default",
+    gameId: DEFAULT_CLOUD_GAME_ID,
     token: DEFAULT_CLOUD_WRITE_TOKEN
   },
   admin: {
@@ -646,6 +746,9 @@ let userUnlockedId = null;
 let autoCloudTimer = null;
 let autoCloudDirty = false;
 let autoCloudInFlight = false;
+let lastHeartbeatPush = 0;
+let battleRuntime = null;
+let battleTickTimer = null;
 
 function tr(k) { return I18N[S.lang][k] || I18N.zh[k] || k; }
 function cropName(k) { return CROPS[k].name[S.lang] || CROPS[k].name.zh; }
@@ -662,6 +765,7 @@ async function flushAutoCloudSave() {
   autoCloudDirty = false;
   autoCloudInFlight = true;
   try {
+    await pullAndMergeCloud();
     await cloudRequest("save");
   } catch (e) {
     console.error(e);
@@ -744,7 +848,7 @@ async function sha256Hex(text) {
 
 function makePlayer(name, avatar, location = "") {
   const id = "p" + Date.now() + Math.random().toString(36).slice(2, 6);
-  return { id, name, avatar, location, gold: 120, xp: 0, plots: Array.from({ length: MAX_PLOTS }, () => ({ crop: null, plantedAt: 0, wateredAt: 0, fertilizedAt: 0 })) };
+  return { id, name, avatar, location, gold: 120, xp: 0, updatedAt: Date.now(), lastActiveAt: Date.now(), plots: Array.from({ length: MAX_PLOTS }, () => ({ crop: null, plantedAt: 0, wateredAt: 0, fertilizedAt: 0 })) };
 }
 
 function levelInfo(xp) {
@@ -756,7 +860,7 @@ function levelInfo(xp) {
 function weatherTick(now) {
   if (now < S.weather.until) return;
   const w = WEATHER[Math.floor(Math.random() * WEATHER.length)];
-  S.weather = { ...w, until: now + (80 + Math.floor(Math.random() * 120)) * 1000 };
+  S.weather = { ...w, until: now + (80 + Math.floor(Math.random() * 120)) * 1000, setAt: now };
 }
 
 function growTime(plot) {
@@ -825,6 +929,359 @@ function addLog(txt) {
   while (box.children.length > 25) box.removeChild(box.lastChild);
 }
 
+// --- Steal battles -----------------------------------------------------
+// When a would-be thief targets a plot whose owner is currently active, the
+// steal becomes an async "trace race" instead of an instant grab: both
+// players independently trace the identical (seed-derived) path on their own
+// screen, whenever they each get to it, and whoever finishes with the better
+// combined speed+accuracy score wins. There is no live/simultaneous channel
+// in this game (state only moves via periodic cloud polling), so the race is
+// inherently asynchronous -- see mergeBattles() for how two independent score
+// submissions get reconciled without clobbering each other.
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Deterministic self-avoiding random walk on a BATTLE_GRID_SIZE grid, so both
+// participants generate the exact same track from the same numeric seed.
+function generateBattlePath(seed) {
+  const rand = mulberry32(seed);
+  const dirNames = Object.keys(DIR_KEYS);
+  const start = { x: Math.floor(BATTLE_GRID_SIZE / 2), y: Math.floor(BATTLE_GRID_SIZE / 2) };
+  let cell = { ...start };
+  const visited = new Set([cell.x + "," + cell.y]);
+  const moves = [];
+  const cells = [{ ...cell }];
+  let guard = 0;
+  while (moves.length < BATTLE_PATH_LEN && guard < 400) {
+    guard++;
+    const order = dirNames.slice().sort(() => rand() - 0.5);
+    let advanced = false;
+    for (const dir of order) {
+      const [dx, dy] = DIR_KEYS[dir];
+      const nx = cell.x + dx, ny = cell.y + dy;
+      if (nx < 0 || ny < 0 || nx >= BATTLE_GRID_SIZE || ny >= BATTLE_GRID_SIZE) continue;
+      const key = nx + "," + ny;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      cell = { x: nx, y: ny };
+      moves.push(dir);
+      cells.push({ ...cell });
+      advanced = true;
+      break;
+    }
+    if (!advanced) break;
+  }
+  return { start, moves, cells };
+}
+
+function battlesForOwner(ownerId) {
+  return Object.values(S.battles).filter((b) => b.ownerId === ownerId);
+}
+
+function findExistingBattle(ownerId, plotIndex, challengerId) {
+  return Object.values(S.battles).find((b) =>
+    b.ownerId === ownerId && b.plotIndex === plotIndex && b.challengerId === challengerId && !b.resolved);
+}
+
+function activeBattleFor(ownerId) {
+  return battlesForOwner(ownerId).find((b) => b.status === "active" && !b.resolved);
+}
+
+// Promotes the oldest queued challenge for this owner to active, if nothing
+// is active yet -- this is what makes challengers "battle one at a time."
+function activateNextQueuedBattle(ownerId) {
+  if (activeBattleFor(ownerId)) return;
+  const queued = battlesForOwner(ownerId)
+    .filter((b) => b.status === "queued" && !b.resolved)
+    .sort((a, b) => a.queuedAt - b.queuedAt)[0];
+  if (!queued) return;
+  const now = Date.now();
+  queued.status = "active";
+  queued.activatedAt = now;
+  queued.expiresAt = now + BATTLE_TIME_LIMIT_MS;
+  queued.updatedAt = now;
+}
+
+function requestBattle(owner, challenger, plotIndex, plot, now) {
+  const existing = findExistingBattle(owner.id, plotIndex, challenger.id);
+  if (existing) {
+    notice(tr("battleAlreadyQueued"), "info");
+    return;
+  }
+  const id = "b" + now + Math.random().toString(36).slice(2, 7);
+  const seed = (now ^ Math.floor(Math.random() * 1e9)) >>> 0;
+  const battle = {
+    id,
+    ownerId: owner.id,
+    challengerId: challenger.id,
+    plotIndex,
+    cropKey: plot.crop,
+    plantedAtSnapshot: plot.plantedAt,
+    seed,
+    status: "queued",
+    queuedAt: now,
+    activatedAt: 0,
+    expiresAt: 0,
+    scores: {},
+    resolved: false,
+    winnerId: null,
+    resolvedAt: 0,
+    updatedAt: now
+  };
+  S.battles[id] = battle;
+  activateNextQueuedBattle(owner.id);
+  save();
+  render();
+  if (battle.status === "active" || S.battles[id].status === "active") {
+    notice(tr("battleStarted"), "info");
+  } else {
+    notice(tr("battleQueued"), "info");
+  }
+}
+
+// Runs a plain function of (scores, expiry) so both participants compute the
+// identical outcome independently -- redundant computation is harmless since
+// there's nothing nondeterministic about who "wins" the race to apply it.
+function tryResolveBattle(battle) {
+  if (!battle || battle.resolved || battle.status !== "active") return;
+  const now = Date.now();
+  const ownerScore = battle.scores[battle.ownerId];
+  const challengerScore = battle.scores[battle.challengerId];
+  const expired = now > battle.expiresAt;
+  if (!expired && !(ownerScore && challengerScore)) return;
+
+  const effective = (s) => (s ? s.score : Infinity);
+  const ownerEff = effective(ownerScore);
+  const challengerEff = effective(challengerScore);
+  let winnerId;
+  if (ownerEff === Infinity && challengerEff === Infinity) winnerId = battle.ownerId;
+  else winnerId = challengerEff < ownerEff ? battle.challengerId : battle.ownerId;
+
+  const owner = S.players[battle.ownerId];
+  const challenger = S.players[battle.challengerId];
+  const plot = owner && owner.plots[battle.plotIndex];
+  const plotStillValid = plot && plot.crop === battle.cropKey && plot.plantedAt === battle.plantedAtSnapshot;
+
+  if (winnerId === battle.challengerId && plotStillValid && challenger) {
+    const c = CROPS[plot.crop];
+    const gain = Math.floor(c.sell * 0.62);
+    challenger.gold += gain;
+    challenger.xp += Math.floor(c.xp * 0.4);
+    challenger.updatedAt = now;
+    const day = new Date(now).toDateString();
+    const k = battle.challengerId + ":" + battle.ownerId + ":" + day;
+    S.steals[k] = (S.steals[k] || 0) + 1;
+    clearPlot(plot);
+    owner.updatedAt = now;
+  }
+
+  battle.resolved = true;
+  battle.winnerId = winnerId;
+  battle.resolvedAt = now;
+  battle.status = "resolved";
+  battle.updatedAt = now;
+  activateNextQueuedBattle(battle.ownerId);
+
+  if (S.currentId === battle.ownerId || S.currentId === battle.challengerId) {
+    const iWon = winnerId === S.currentId;
+    addLog("⚔️ " + (iWon ? tr("battleWon") : tr("battleLost")));
+    notice(iWon ? tr("battleWon") : tr("battleLost"), iWon ? "" : "err");
+  }
+}
+
+function resolveRelevantBattles() {
+  if (!S.currentId) return;
+  Object.values(S.battles).forEach((b) => {
+    if (b.ownerId === S.currentId || b.challengerId === S.currentId) tryResolveBattle(b);
+  });
+}
+
+function pruneOldBattles() {
+  const now = Date.now();
+  Object.keys(S.battles).forEach((id) => {
+    const b = S.battles[id];
+    if (b.resolved && now - b.resolvedAt > BATTLE_MAX_AGE_MS) delete S.battles[id];
+  });
+}
+
+// The battle relevant to the current player right now, prioritizing whatever
+// needs their attention most: an unresolved result, then an active race
+// awaiting their attempt, then their position in an owner's queue.
+function myRelevantBattle() {
+  if (!S.currentId) return null;
+  const mine = Object.values(S.battles).filter((b) => b.ownerId === S.currentId || b.challengerId === S.currentId);
+  const needsAttempt = mine.find((b) => b.status === "active" && !b.resolved && !b.scores[S.currentId]);
+  if (needsAttempt) return needsAttempt;
+  const queued = mine.filter((b) => b.status === "queued" && !b.resolved && b.challengerId === S.currentId)
+    .sort((a, b) => a.queuedAt - b.queuedAt)[0];
+  if (queued) return queued;
+  const waiting = mine.find((b) => b.status === "active" && !b.resolved);
+  return waiting || null;
+}
+
+function isBattleModalOpen() {
+  const m = document.getElementById("battleModal");
+  return !!(m && m.classList.contains("show"));
+}
+
+function renderBattleBar() {
+  const bar = document.getElementById("battleBar");
+  if (!bar || !S.currentId) { if (bar) { bar.classList.add("hidden"); bar.innerHTML = ""; } return; }
+  const battle = myRelevantBattle();
+  if (!battle) {
+    bar.classList.add("hidden");
+    bar.innerHTML = "";
+    return;
+  }
+  bar.classList.remove("hidden");
+  const isOwner = battle.ownerId === S.currentId;
+  const opponent = S.players[isOwner ? battle.challengerId : battle.ownerId];
+  const oppName = (opponent && opponent.name) || "?";
+  const crop = CROPS[battle.cropKey] ? cropName(battle.cropKey) : "";
+
+  let text = "";
+  let showBtn = false;
+  if (battle.status === "queued") {
+    const queue = battlesForOwner(battle.ownerId).filter((b) => b.status === "queued" && !b.resolved)
+      .sort((a, b) => a.queuedAt - b.queuedAt);
+    const pos = queue.findIndex((b) => b.id === battle.id) + 1;
+    text = tr("battleQueuePos").replace("{n}", pos).replace("{name}", oppName);
+  } else if (battle.status === "active" && !battle.scores[S.currentId]) {
+    text = (isOwner ? tr("battleIncoming") : tr("battleChallenge")).replace("{name}", oppName).replace("{crop}", crop);
+    showBtn = true;
+  } else if (battle.status === "active") {
+    text = tr("battleWaitingOpponent").replace("{name}", oppName);
+  }
+
+  bar.innerHTML = "";
+  const span = document.createElement("span");
+  span.textContent = text;
+  bar.appendChild(span);
+  if (showBtn) {
+    const btn = document.createElement("button");
+    btn.className = "btn active";
+    btn.textContent = tr("battleFight");
+    btn.addEventListener("click", () => openBattleModal(battle));
+    bar.appendChild(btn);
+  }
+}
+
+function renderBattleTrack(battle, stepIndex) {
+  const path = generateBattlePath(battle.seed);
+  const grid = document.getElementById("battleGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = "repeat(" + BATTLE_GRID_SIZE + ", 1fr)";
+  const pathIndexByKey = new Map(path.cells.map((c, i) => [c.x + "," + c.y, i]));
+  for (let y = 0; y < BATTLE_GRID_SIZE; y++) {
+    for (let x = 0; x < BATTLE_GRID_SIZE; x++) {
+      const cell = document.createElement("div");
+      cell.className = "battle-cell";
+      const idx = pathIndexByKey.get(x + "," + y);
+      if (idx !== undefined) {
+        cell.classList.add("on-path");
+        if (idx <= stepIndex) cell.classList.add("done");
+        if (idx === stepIndex + 1) cell.classList.add("target");
+        if (idx === stepIndex) cell.classList.add("marker");
+      }
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function flashBattleGrid() {
+  const grid = document.getElementById("battleGrid");
+  if (!grid) return;
+  grid.classList.remove("shake");
+  void grid.offsetWidth;
+  grid.classList.add("shake");
+}
+
+function updateBattleTimerDisplay() {
+  if (!battleRuntime) return;
+  const el = document.getElementById("battleTimer");
+  if (el) el.textContent = ((Date.now() - battleRuntime.startedAt) / 1000).toFixed(1) + "s";
+}
+
+function openBattleModal(battle) {
+  if (battle.scores[S.currentId] || battle.resolved) return;
+  battleRuntime = { battleId: battle.id, startedAt: Date.now(), stepIndex: 0, mistakes: 0 };
+  renderBattleTrack(battle, 0);
+  document.getElementById("battleTimer").textContent = "0.0s";
+  document.getElementById("battleMistakes").textContent = "0";
+  const isOwner = battle.ownerId === S.currentId;
+  const opponent = S.players[isOwner ? battle.challengerId : battle.ownerId];
+  document.getElementById("battleSubtitle").textContent = tr("battleVs") + " " + ((opponent && opponent.name) || "?");
+  document.getElementById("battleModal").classList.add("show");
+  clearInterval(battleTickTimer);
+  battleTickTimer = setInterval(updateBattleTimerDisplay, 100);
+}
+
+function closeBattleModal() {
+  document.getElementById("battleModal").classList.remove("show");
+  clearInterval(battleTickTimer);
+  battleTickTimer = null;
+  battleRuntime = null;
+}
+
+function finishBattleAttempt(battle) {
+  const elapsedMs = Date.now() - battleRuntime.startedAt;
+  const mistakes = battleRuntime.mistakes;
+  const score = elapsedMs + mistakes * BATTLE_MISTAKE_PENALTY_MS;
+  const now = Date.now();
+  battle.scores[S.currentId] = { elapsedMs, mistakes, score, submittedAt: now };
+  battle.updatedAt = now;
+  closeBattleModal();
+  notice(tr("battleSubmitted"), "info");
+  tryResolveBattle(battle);
+  save();
+  render();
+  renderBattleBar();
+}
+
+function battleTryMove(dir) {
+  if (!battleRuntime) return;
+  const battle = S.battles[battleRuntime.battleId];
+  if (!battle || battle.resolved) { closeBattleModal(); return; }
+  const path = generateBattlePath(battle.seed);
+  const expected = path.moves[battleRuntime.stepIndex];
+  if (dir === expected) {
+    battleRuntime.stepIndex++;
+    renderBattleTrack(battle, battleRuntime.stepIndex);
+    if (battleRuntime.stepIndex >= path.moves.length) {
+      finishBattleAttempt(battle);
+    }
+  } else {
+    battleRuntime.mistakes++;
+    const el = document.getElementById("battleMistakes");
+    if (el) el.textContent = String(battleRuntime.mistakes);
+    flashBattleGrid();
+  }
+}
+
+// Shared input dispatcher for keyboard, the on-screen d-pad, and the
+// Bluetooth controller: all three route through here so a battle in
+// progress intercepts direction input instead of moving the farm cursor.
+function dirInput(dir) {
+  if (isBattleModalOpen()) { battleTryMove(dir); return; }
+  const deltas = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  const [dx, dy] = deltas[dir];
+  moveCursor(dx, dy);
+}
+
+function actInput() {
+  if (isBattleModalOpen()) return;
+  actPlot(S.cursor);
+}
+
 async function cloudRequest(action) {
   if (location.protocol === "file:") {
     throw new Error("CLOUD_FILE_MODE");
@@ -874,6 +1331,115 @@ async function cloudRequest(action) {
   return data;
 }
 
+function mergePlayers(localPlayers, cloudPlayers) {
+  const merged = { ...localPlayers };
+  Object.keys(cloudPlayers || {}).forEach((id) => {
+    const c = cloudPlayers[id];
+    const l = merged[id];
+    if (!l) { merged[id] = c; return; }
+    // lastActiveAt is a presence heartbeat, not a data edit -- keep whichever
+    // side saw the player more recently even if the other side "wins" the record.
+    const newest = (c.updatedAt || 0) > (l.updatedAt || 0) ? c : l;
+    const lastActiveAt = Math.max(l.lastActiveAt || 0, c.lastActiveAt || 0);
+    merged[id] = newest.lastActiveAt === lastActiveAt ? newest : { ...newest, lastActiveAt };
+  });
+  return merged;
+}
+
+function mergeSteals(localSteals, cloudSteals) {
+  const merged = { ...localSteals };
+  Object.keys(cloudSteals || {}).forEach((k) => {
+    merged[k] = Math.max(merged[k] || 0, cloudSteals[k] || 0);
+  });
+  return merged;
+}
+
+function mergePendingSignups(localList, cloudList) {
+  const map = new Map();
+  (localList || []).forEach((r) => map.set(r.id, r));
+  (cloudList || []).forEach((r) => { if (!map.has(r.id)) map.set(r.id, r); });
+  return Array.from(map.values());
+}
+
+// Battle records get written to by two different players (owner + challenger),
+// each only ever touching their own scores[myId] entry. A whole-record
+// newest-wins merge would let one player's score submission erase the other's,
+// so scores are unioned field-by-field instead of replaced wholesale.
+function mergeBattles(localBattles, cloudBattles) {
+  const merged = { ...localBattles };
+  Object.keys(cloudBattles || {}).forEach((id) => {
+    const c = cloudBattles[id];
+    const l = merged[id];
+    if (!l) { merged[id] = c; return; }
+    const base = (c.updatedAt || 0) > (l.updatedAt || 0) ? c : l;
+    merged[id] = {
+      ...base,
+      scores: { ...(c.scores || {}), ...(l.scores || {}) },
+      resolved: !!(l.resolved || c.resolved),
+      winnerId: l.winnerId || c.winnerId || null,
+      status: (l.resolved || c.resolved) ? "resolved" : base.status
+    };
+  });
+  return merged;
+}
+
+// Cloud state is a shared blob written by every open session, so a plain overwrite
+// on save/load would let whichever tab writes last erase everyone else's progress.
+// Instead we reconcile field-by-field, letting the newest per-player update win.
+function mergeCloudStateIn(cloudState) {
+  if (!cloudState || typeof cloudState !== "object") return;
+  S.players = mergePlayers(S.players, cloudState.players || {});
+  S.steals = mergeSteals(S.steals, cloudState.steals || {});
+  S.battles = mergeBattles(S.battles, cloudState.battles || {});
+  S.userAuth.userHashes = { ...((cloudState.userAuth && cloudState.userAuth.userHashes) || {}), ...S.userAuth.userHashes };
+  S.admin.pendingSignups = mergePendingSignups(S.admin.pendingSignups, (cloudState.admin && cloudState.admin.pendingSignups) || []);
+  if (!S.admin.adminId && cloudState.admin && cloudState.admin.adminId) {
+    S.admin.adminId = cloudState.admin.adminId;
+  }
+  if (cloudState.weather && (cloudState.weather.setAt || 0) > (S.weather.setAt || 0)) {
+    S.weather = cloudState.weather;
+  }
+  pruneOldBattles();
+}
+
+// Pulls the latest cloud blob and merges it into local state. Used both for the
+// periodic background refresh and as a pre-push step before every cloud save, so
+// a save reconciles with whatever other sessions wrote instead of clobbering it.
+async function pullAndMergeCloud() {
+  const data = await cloudRequest("load");
+  if (data && data.ok && data.state && typeof data.state === "object") {
+    mergeCloudStateIn(data.state);
+    resolveRelevantBattles();
+    save(false);
+    render();
+    renderBattleBar();
+  }
+  return data;
+}
+
+async function pullCloudSilently() {
+  if (!(S.cloud.url || "").trim() || autoCloudInFlight) return;
+  try {
+    await pullAndMergeCloud();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Poll faster while actively visiting a friend's farm, since that's when
+// staleness is most visible; fall back to a slower idle cadence otherwise.
+function cloudPollIntervalMs() {
+  const visiting = !!S.viewId && S.viewId !== S.currentId;
+  return visiting ? 2000 : 5000;
+}
+
+function scheduleCloudPoll() {
+  setTimeout(async () => {
+    await pullCloudSilently();
+    scheduleCloudPoll();
+  }, cloudPollIntervalMs());
+}
+
 function cloudErrorNotice(err) {
   const msg = String((err && err.message) || "");
   if (msg === "CLOUD_BAD_URL") {
@@ -897,6 +1463,7 @@ function cloudErrorNotice(err) {
 
 async function saveToCloud() {
   try {
+    await pullAndMergeCloud();
     const data = await cloudRequest("save");
     if (data && data.ok) {
       notice(tr("cloudSaveOk"));
@@ -913,6 +1480,7 @@ async function saveToCloud() {
 async function saveAuthSnapshotToCloud() {
   if (!(S.cloud.url || "").trim()) return;
   try {
+    await pullAndMergeCloud();
     await cloudRequest("save");
     addLog("☁️ auth synced");
   } catch (e) {
@@ -922,23 +1490,12 @@ async function saveAuthSnapshotToCloud() {
 
 async function loadFromCloud() {
   try {
-    const data = await cloudRequest("load");
+    const data = await pullAndMergeCloud();
     if (data && data.ok === false && data.error === "not_found") {
       notice(tr("cloudNoData"), "info");
       return;
     }
     if (data && data.ok && data.state && typeof data.state === "object") {
-      const cloud = { ...S.cloud };
-      S = {
-        ...S,
-        ...data.state,
-        players: data.state.players || {},
-        weather: data.state.weather || S.weather,
-        cloud
-      };
-      loadAdminAuthLocal();
-      save(false);
-      render();
       notice(tr("cloudLoadOk"));
       addLog("☁️ " + tr("cloudLoadOk"));
       return;
@@ -1015,6 +1572,7 @@ function adminApplyStats() {
   if (!p) return;
   p.gold = Math.max(0, Number(document.getElementById("adminGold").value) || 0);
   p.xp = Math.max(0, Number(document.getElementById("adminXp").value) || 0);
+  p.updatedAt = Date.now();
   save();
   render();
   notice(tr("adminDone"), "info");
@@ -1025,6 +1583,7 @@ function adminBoost() {
   if (!p) return;
   p.gold += 500;
   p.xp += 500;
+  p.updatedAt = Date.now();
   adminSyncFields();
   save();
   render();
@@ -1045,6 +1604,7 @@ function adminFillReady() {
     p.plots[i].wateredAt = now - (grow + 1) * 1000;
     p.plots[i].fertilizedAt = 0;
   }
+  p.updatedAt = now;
   save();
   render();
   notice(tr("adminDone"), "info");
@@ -1054,6 +1614,7 @@ function adminClearPlots() {
   const p = adminSelectedPlayer();
   if (!p) return;
   p.plots.forEach(clearPlot);
+  p.updatedAt = Date.now();
   save();
   render();
   notice(tr("adminDone"), "info");
@@ -1061,7 +1622,7 @@ function adminClearPlots() {
 
 function adminSetWeather(index) {
   const w = WEATHER[index] || WEATHER[0];
-  S.weather = { ...w, until: Date.now() + 180000 };
+  S.weather = { ...w, until: Date.now() + 180000, setAt: Date.now() };
   save();
   render();
   notice(tr("adminDone"), "info");
@@ -1273,6 +1834,7 @@ function logoutCurrentUser() {
   closeAdmin();
   closeSwitch();
   closeLoginPage();
+  closeBattleModal();
   save();
   render();
 }
@@ -1335,16 +1897,25 @@ function actPlot(idx) {
     const k = S.currentId + ":" + ownerId + ":" + day;
     S.steals[k] = S.steals[k] || 0;
     if (S.steals[k] >= 5) return;
-    const c = CROPS[p.crop];
-    const gain = Math.floor(c.sell * 0.62);
-    me.gold += gain;
-    me.xp += Math.floor(c.xp * 0.4);
-    S.steals[k] += 1;
-    clearPlot(p);
-    addLog("🦊 " + me.name + " " + tr("stolen") + " " + c.icon + " +" + gain + "🪙");
-    notice(tr("stolen"));
-    save();
-    render();
+
+    const ownerActive = (now - (owner.lastActiveAt || 0)) < BATTLE_ACTIVE_WINDOW_MS;
+    if (!ownerActive) {
+      const c = CROPS[p.crop];
+      const gain = Math.floor(c.sell * 0.62);
+      me.gold += gain;
+      me.xp += Math.floor(c.xp * 0.4);
+      S.steals[k] += 1;
+      clearPlot(p);
+      me.updatedAt = now;
+      owner.updatedAt = now;
+      addLog("🦊 " + me.name + " " + tr("stolen") + " " + c.icon + " +" + gain + "🪙");
+      notice(tr("stolen"));
+      save();
+      render();
+      return;
+    }
+
+    requestBattle(owner, me, idx, p, now);
     return;
   }
 
@@ -1390,6 +1961,7 @@ function actPlot(idx) {
     notice(tr("harvested"));
   }
 
+  me.updatedAt = now;
   save();
   render();
 }
@@ -1448,6 +2020,11 @@ function renderText() {
   document.getElementById("newLocation").placeholder = tr("locPh");
   document.getElementById("newPassword").placeholder = tr("passPh");
   document.getElementById("controlHint").textContent = tr("controlHint");
+  document.getElementById("battleTitle").textContent = tr("battleTitle");
+  document.getElementById("battleTimeLabel").textContent = tr("battleTimeLabel");
+  document.getElementById("battleMistakesLabel").textContent = tr("battleMistakesLabel");
+  document.getElementById("battleInstructions").textContent = tr("battleInstructions");
+  document.getElementById("battleGiveUp").textContent = tr("battleClose");
 
   const btBtn = document.getElementById("btBtn");
   const connected = btDevice && btDevice.gatt && btDevice.gatt.connected;
@@ -1613,8 +2190,10 @@ function renderGrid() {
     } else {
       const icon = st === "withered" ? "🥀" : CROPS[p.crop].icon;
       const badges = (p.wateredAt > p.plantedAt ? "💧" : "") + (p.fertilizedAt > p.plantedAt ? "🧪" : "");
+      const contested = Object.values(S.battles).some((b) => b.ownerId === owner.id && b.plotIndex === i && !b.resolved);
       btn.innerHTML =
         (badges ? '<div class="badges">' + badges + '</div>' : "") +
+        (contested ? '<div class="plot-badge-battle">⚔️</div>' : "") +
         '<div class="plot-icon">' + icon + '</div>' +
         '<div class="plot-time">' + pLabel(p, now) + '</div>' +
         '<div class="progress"><span style="width:' + Math.floor(pProgress(p, now) * 100) + '%"></span></div>';
@@ -1671,6 +2250,7 @@ function render() {
   renderShop();
   renderFriends();
   renderGrid();
+  renderBattleBar();
 }
 
 function moveCursor(dx, dy) {
@@ -1694,11 +2274,11 @@ function setToolByIndex(i) {
 function handleCmd(cmdRaw) {
   const cmd = String(cmdRaw || "").trim().toUpperCase();
   if (!cmd) return;
-  if (cmd.includes("UP")) moveCursor(0, -1);
-  else if (cmd.includes("DOWN")) moveCursor(0, 1);
-  else if (cmd.includes("LEFT")) moveCursor(-1, 0);
-  else if (cmd.includes("RIGHT")) moveCursor(1, 0);
-  else if (cmd.includes("ACT") || cmd === "A") actPlot(S.cursor);
+  if (cmd.includes("UP")) dirInput("up");
+  else if (cmd.includes("DOWN")) dirInput("down");
+  else if (cmd.includes("LEFT")) dirInput("left");
+  else if (cmd.includes("RIGHT")) dirInput("right");
+  else if (cmd.includes("ACT") || cmd === "A") actInput();
   else if (cmd.includes("TOOL1")) setToolByIndex(0);
   else if (cmd.includes("TOOL2")) setToolByIndex(1);
   else if (cmd.includes("TOOL3")) setToolByIndex(2);
@@ -1869,35 +2449,48 @@ function bindUI() {
 
   document.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
-    if (k === "arrowup" || k === "w") moveCursor(0, -1);
-    if (k === "arrowdown" || k === "s") moveCursor(0, 1);
-    if (k === "arrowleft" || k === "a") moveCursor(-1, 0);
-    if (k === "arrowright" || k === "d") moveCursor(1, 0);
-    if (k === " ") { e.preventDefault(); actPlot(S.cursor); }
-    if (k === "1") setToolByIndex(0);
-    if (k === "2") setToolByIndex(1);
-    if (k === "3") setToolByIndex(2);
-    if (k === "4") setToolByIndex(3);
+    if (k === "arrowup" || k === "w") dirInput("up");
+    if (k === "arrowdown" || k === "s") dirInput("down");
+    if (k === "arrowleft" || k === "a") dirInput("left");
+    if (k === "arrowright" || k === "d") dirInput("right");
+    if (k === " ") { e.preventDefault(); actInput(); }
+    if (!isBattleModalOpen()) {
+      if (k === "1") setToolByIndex(0);
+      if (k === "2") setToolByIndex(1);
+      if (k === "3") setToolByIndex(2);
+      if (k === "4") setToolByIndex(3);
+    }
   });
 
   document.getElementById("pad").addEventListener("click", (e) => {
     const b = e.target.closest(".pad-btn");
     if (!b) return;
     const act = b.getAttribute("data-act");
-    if (act === "left") moveCursor(-1, 0);
-    if (act === "right") moveCursor(1, 0);
-    if (act === "up") moveCursor(0, -1);
-    if (act === "down") moveCursor(0, 1);
-    if (act === "action") actPlot(S.cursor);
+    if (act === "left") dirInput("left");
+    if (act === "right") dirInput("right");
+    if (act === "up") dirInput("up");
+    if (act === "down") dirInput("down");
+    if (act === "action") actInput();
   });
+
+  document.getElementById("battleGiveUp").addEventListener("click", closeBattleModal);
+  document.getElementById("battleModal").addEventListener("click", (e) => { if (e.target.id === "battleModal") closeBattleModal(); });
 }
 
 function loop() {
-  weatherTick(Date.now());
+  const now = Date.now();
+  weatherTick(now);
+  if (S.currentId && S.players[S.currentId]) {
+    S.players[S.currentId].lastActiveAt = now;
+  }
+  resolveRelevantBattles();
   renderHeader();
   renderGrid();
   renderFriends();
-  save(false);
+  renderBattleBar();
+  const heartbeatDue = S.currentId && now - lastHeartbeatPush > BATTLE_HEARTBEAT_MS;
+  if (heartbeatDue) lastHeartbeatPush = now;
+  save(heartbeatDue);
 }
 
 async function boot() {
@@ -1915,6 +2508,7 @@ async function boot() {
   render();
   openLoginPage();
   setInterval(loop, 1000);
+  scheduleCloudPoll();
 }
 
 boot();
